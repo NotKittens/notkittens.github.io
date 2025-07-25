@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Local Frame Animation Editor</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f9f9f9;
+    }
+
+    #frameDisplay {
+      width: 300px;
+      height: 300px;
+      margin: 20px auto;
+      background-color: #ddd;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      border: 2px solid #333;
+    }
+
+    input, button {
+      margin: 5px;
+      padding: 5px 10px;
+    }
+
+    #frameList {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+
+    .thumb {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border: 2px solid #aaa;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+    }
+
+    .thumb span {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: red;
+      color: white;
+      border: none;
+      font-size: 12px;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .thumb.active {
+      border-color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>🖼️ Frame Animation Editor</h2>
+
+  <input type="file" id="imageInput" multiple accept="image/*">
+  <input type="number" id="fpsInput" value="5" min="1" max="60">
+  <button onclick="startAnimation()">▶ Start</button>
+  <button onclick="pauseAnimation()">⏸ Pause</button>
+  <div>Frame: <span id="frameIndex">0</span> / <span id="totalFrames">0</span></div>
+
+  <div id="frameDisplay"></div>
+
+  <h3>📂 Frame List</h3>
+  <div id="frameList"></div>
+
+  <script>
+    let currentFrame = 0;
+    let frameInterval = null;
+    let imageURLs = [];
+
+    const frameDisplay = document.getElementById('frameDisplay');
+    const frameList = document.getElementById('frameList');
+    const frameIndexText = document.getElementById('frameIndex');
+    const totalFramesText = document.getElementById('totalFrames');
+
+    document.getElementById('imageInput').addEventListener('change', (event) => {
+      imageURLs = [];
+      frameList.innerHTML = '';
+
+      const files = Array.from(event.target.files);
+
+      files.forEach((file, index) => {
+        const url = URL.createObjectURL(file);
+        imageURLs.push(url);
+        addThumbnail(url, index);
+      });
+
+      updateDisplay();
+    });
+
+    function addThumbnail(url, index) {
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      thumb.style.backgroundImage = `url('${url}')`;
+
+      const indexLabel = document.createElement('span');
+      indexLabel.textContent = index;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete-btn';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeFrame(index);
+      };
+
+      thumb.onclick = () => {
+        currentFrame = index;
+        updateDisplay();
+      };
+
+      thumb.appendChild(indexLabel);
+      thumb.appendChild(deleteBtn);
+      frameList.appendChild(thumb);
+    }
+
+    function removeFrame(index) {
+      imageURLs.splice(index, 1);
+      Array.from(frameList.children).forEach(child => child.remove());
+      imageURLs.forEach((url, i) => addThumbnail(url, i));
+      currentFrame = 0;
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      totalFramesText.textContent = imageURLs.length;
+      if (imageURLs.length === 0) {
+        frameDisplay.style.backgroundImage = 'none';
+        frameIndexText.textContent = 0;
+        return;
+      }
+
+      currentFrame = currentFrame % imageURLs.length;
+      frameDisplay.style.backgroundImage = `url('${imageURLs[currentFrame]}')`;
+      frameIndexText.textContent = currentFrame + 1;
+
+      // highlight active thumbnail
+      const thumbs = document.querySelectorAll('.thumb');
+      thumbs.forEach((t, i) => t.classList.toggle('active', i === currentFrame));
+    }
+
+    function startAnimation() {
+      pauseAnimation(); // clear previous loop
+      const fps = parseInt(document.getElementById('fpsInput').value);
+      if (imageURLs.length === 0 || isNaN(fps) || fps <= 0) {
+        alert('Please load images and enter valid fps');
+        return;
+      }
+
+      frameInterval = setInterval(() => {
+        currentFrame = (currentFrame + 1) % imageURLs.length;
+        updateDisplay();
+      }, 1000 / fps);
+    }
+
+    function pauseAnimation() {
+      clearInterval(frameInterval);
+    }
+  </script>
+
+</body>
+</html>
