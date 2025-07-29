@@ -72,6 +72,21 @@
     .thumb.active {
       border-color: red;
     }
+
+    .thumb-wrapper {
+      width: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .file-name {
+      font-size: 10px;
+      word-break: break-word;
+      margin-top: 4px;
+      max-width: 100%;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -107,14 +122,14 @@
 
       files.forEach((file, index) => {
         const url = URL.createObjectURL(file);
-        imageURLs.push(url);
-        addThumbnail(url, index);
+        imageURLs.push({ url, name: file.name });
+        addThumbnail(url, index, file.name);
       });
 
       updateDisplay();
     });
 
-    function addThumbnail(url, index) {
+    function addThumbnail(url, index, name) {
       const thumb = document.createElement('div');
       thumb.className = 'thumb';
       thumb.style.backgroundImage = `url('${url}')`;
@@ -137,13 +152,23 @@
 
       thumb.appendChild(indexLabel);
       thumb.appendChild(deleteBtn);
-      frameList.appendChild(thumb);
+
+      const nameLabel = document.createElement('div');
+      nameLabel.className = 'file-name';
+      nameLabel.textContent = name;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'thumb-wrapper';
+      wrapper.appendChild(thumb);
+      wrapper.appendChild(nameLabel);
+
+      frameList.appendChild(wrapper);
     }
 
     function removeFrame(index) {
       imageURLs.splice(index, 1);
-      Array.from(frameList.children).forEach(child => child.remove());
-      imageURLs.forEach((url, i) => addThumbnail(url, i));
+      frameList.innerHTML = '';
+      imageURLs.forEach((item, i) => addThumbnail(item.url, i, item.name));
       currentFrame = 0;
       updateDisplay();
     }
@@ -157,10 +182,9 @@
       }
 
       currentFrame = currentFrame % imageURLs.length;
-      frameDisplay.style.backgroundImage = `url('${imageURLs[currentFrame]}')`;
+      frameDisplay.style.backgroundImage = `url('${imageURLs[currentFrame].url}')`;
       frameIndexText.textContent = currentFrame + 1;
 
-      // highlight active thumbnail
       const thumbs = document.querySelectorAll('.thumb');
       thumbs.forEach((t, i) => t.classList.toggle('active', i === currentFrame));
     }
