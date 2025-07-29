@@ -123,54 +123,86 @@
       files.forEach((file, index) => {
         const url = URL.createObjectURL(file);
         imageURLs.push({ url, name: file.name });
-        addThumbnail(url, index, file.name);
       });
 
+      renderThumbnails();
       updateDisplay();
     });
 
-    function addThumbnail(url, index, name) {
-      const thumb = document.createElement('div');
-      thumb.className = 'thumb';
-      thumb.style.backgroundImage = `url('${url}')`;
-
-      const indexLabel = document.createElement('span');
-      indexLabel.textContent = index;
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'delete-btn';
-      deleteBtn.innerHTML = '×';
-      deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        removeFrame(index);
-      };
-
-      thumb.onclick = () => {
-        currentFrame = index;
-        updateDisplay();
-      };
-
-      thumb.appendChild(indexLabel);
-      thumb.appendChild(deleteBtn);
-
-      const nameLabel = document.createElement('div');
-      nameLabel.className = 'file-name';
-      nameLabel.textContent = name;
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'thumb-wrapper';
-      wrapper.appendChild(thumb);
-      wrapper.appendChild(nameLabel);
-
-      frameList.appendChild(wrapper);
-    }
-
-    function removeFrame(index) {
-      imageURLs.splice(index, 1);
+    function renderThumbnails() {
       frameList.innerHTML = '';
-      imageURLs.forEach((item, i) => addThumbnail(item.url, i, item.name));
-      currentFrame = 0;
-      updateDisplay();
+      imageURLs.forEach((item, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'thumb-wrapper';
+        wrapper.draggable = true;
+        wrapper.dataset.index = index;
+
+        // Drag events
+        wrapper.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', index);
+          wrapper.style.opacity = 0.5;
+        });
+
+        wrapper.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          wrapper.style.border = '2px dashed blue';
+        });
+
+        wrapper.addEventListener('dragleave', () => {
+          wrapper.style.border = '';
+        });
+
+        wrapper.addEventListener('drop', (e) => {
+          e.preventDefault();
+          wrapper.style.border = '';
+          const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+          const toIndex = parseInt(wrapper.dataset.index);
+          if (fromIndex !== toIndex) {
+            const [moved] = imageURLs.splice(fromIndex, 1);
+            imageURLs.splice(toIndex, 0, moved);
+            renderThumbnails();
+            updateDisplay();
+          }
+        });
+
+        wrapper.addEventListener('dragend', () => {
+          wrapper.style.opacity = 1;
+        });
+
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb';
+        thumb.style.backgroundImage = `url('${item.url}')`;
+
+        const indexLabel = document.createElement('span');
+        indexLabel.textContent = index;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          imageURLs.splice(index, 1);
+          renderThumbnails();
+          currentFrame = 0;
+          updateDisplay();
+        };
+
+        thumb.onclick = () => {
+          currentFrame = index;
+          updateDisplay();
+        };
+
+        thumb.appendChild(indexLabel);
+        thumb.appendChild(deleteBtn);
+
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'file-name';
+        nameLabel.textContent = item.name;
+
+        wrapper.appendChild(thumb);
+        wrapper.appendChild(nameLabel);
+        frameList.appendChild(wrapper);
+      });
     }
 
     function updateDisplay() {
@@ -190,7 +222,7 @@
     }
 
     function startAnimation() {
-      pauseAnimation(); // clear previous loop
+      pauseAnimation();
       const fps = parseInt(document.getElementById('fpsInput').value);
       if (imageURLs.length === 0 || isNaN(fps) || fps <= 0) {
         alert('Please load images and enter valid fps');
